@@ -418,6 +418,75 @@ Selanjutnya, dashboard CloudStack akan tampil dan setup infrastruktur cloud dapa
 
 ---
 
+### Step 8: Setup Web Server, Port Forwarding, dan Cloudflare Tunnel
+
+Bagian ini menjelaskan cara mengatur Web Server pada VM yang berjalan di CloudStack, serta cara mengeksposnya ke publik melalui Port Forwarding dan Cloudflare Tunnel.
+
+#### 8a. Setup Nginx di VM Ubuntu Server
+
+Gunakan VM Ubuntu Server yang sudah dikonfigurasi dan berjalan di CloudStack. Lakukan instalasi Nginx sebagai web server utama:
+
+```bash
+sudo apt update
+sudo apt install nginx -y
+sudo systemctl enable nginx
+sudo systemctl start nginx
+```
+
+#### 8b. Konfigurasi Firewall dan Port Forwarding di CloudStack GUI
+
+Untuk mengekspos VM web server ke jaringan, atur firewall dan port forwarding melalui antarmuka CloudStack:
+
+1. Buka CloudStack GUI.
+2. Navigasi ke menu **Network** -> **Public IP Address** -> Klik IP **192.168.1.52**.
+3. Buka tab **Firewall** dan tambahkan aturan (rule) baru untuk mengizinkan trafik HTTP:
+   - Protocol: TCP
+   - Port: 80
+   - CIDR: `0.0.0.0/0`
+   
+   ![Firewall Tab](images/firewall_tab.png)
+
+4. Buka tab **Port Forwarding** dan tambahkan aturan baru agar trafik dari IP publik diteruskan ke VM:
+   - Public Port: 80
+   - Private Port: 80
+   - Protocol: TCP
+   - Add VM: Pilih VM **web-server-ubuntu-server**
+   
+   ![Port Forwarding Tab](images/port-forwarding_tab.png)
+
+Setelah pengaturan di atas selesai, verifikasi bahwa web server sudah berjalan dengan mengakses IP publik tersebut melalui browser: `http://192.168.1.52`.
+
+#### 8c. Konfigurasi Cloudflare Tunnel
+
+Agar web server dapat diakses menggunakan domain publik dengan protokol HTTPS, tambahkan konfigurasinya ke dalam Cloudflare Tunnel:
+
+1. Edit file konfigurasi Cloudflare Tunnel:
+   ```bash
+   sudo nano /etc/cloudflare/config.yml
+   ```
+   *(Catatan: Path bisa jadi berada di `/etc/cloudflared/config.yml` tergantung sistem Anda)*
+
+2. Tambahkan ingress rule baru pada konfigurasi:
+   ```yaml
+   - hostname: vm-web.christianhadiwijaya.dev
+     service: http://192.168.1.52:80
+   ```
+
+3. Tambahkan DNS route menuju tunnel yang digunakan (misal: `cloud9`) untuk hostname yang baru:
+   ```bash
+   cloudflared tunnel route dns cloud9 vm-web.christianhadiwijaya.dev
+   ```
+
+4. Restart service Cloudflare untuk menerapkan perubahan konfigurasi:
+   ```bash
+   sudo systemctl restart cloudflared
+   ```
+
+Setelah seluruh langkah berhasil dilakukan, web server seharusnya sudah bisa diakses secara publik dan aman di URL: [https://vm-web.christianhadiwijaya.dev](https://vm-web.christianhadiwijaya.dev).
+
+
+---
+
 ## Catatan Penting
 
 **VirtualBox dan WiFi Bridging**  
