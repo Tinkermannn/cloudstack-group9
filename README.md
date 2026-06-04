@@ -433,6 +433,16 @@ CloudStack, KVM, MySQL, dan System VMs (SSVM + Console Proxy) berjalan bersamaan
 Seluruh konfigurasi CloudStack (database, zone, host, storage) mengacu ke IP spesifik. Pastikan IP server selalu statis agar tidak berubah setelah reboot, dengan menggunakan `dhcp4: false` di konfigurasi Netplan.
 
 ---
+## Anggota:
+1. Benedict Aurelius (2306209095)
+2. Gede Rama Pradnya (2306161914)
+3. Reyhan Ahnaf Deannova (2306267100)
+4. Rafi Naufal Aryaputra (2306250680)
+5. M Arya Wiandra (2306218295)
+6. Andrew Kristofer Jian (XXXXXXX)
+7. Christian Hadiwijaya (2306161952)
+8. Wilman Saragih Sitio (2306161776)
+9. Fadlihajjan Carel Agfata (2206826822)
 
 ## Referensi
 
