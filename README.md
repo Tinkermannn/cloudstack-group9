@@ -1,17 +1,16 @@
 # Cloud 9: Apache CloudStack Setup on VirtualBox Ubuntu Server 24.04
 
-
 ---
 
 ## Spesifikasi
 
-| Komponen | Detail |
-|---|---|
-| OS | Ubuntu Server 24.04.4 LTS |
-| CloudStack | 4.18.2.5 |
-| Hypervisor | KVM |
-| Virtualisasi | VirtualBox (NAT Network) |
-| Akses Remote | Tailscale |
+| Komponen     | Detail                    |
+| ------------ | ------------------------- |
+| OS           | Ubuntu Server 24.04.4 LTS |
+| CloudStack   | 4.18.2.5                  |
+| Hypervisor   | KVM                       |
+| Virtualisasi | VirtualBox (NAT Network)  |
+| Akses Remote | Tailscale                 |
 
 ---
 
@@ -20,17 +19,17 @@
 Sebelum memulai, penting untuk memahami komponen utama yang digunakan dalam setup ini dan peran masing-masing.
 
 - **Apache CloudStack**  
-Platform IaaS (Infrastructure as a Service) open source yang menjadi inti dari setup ini. CloudStack bertanggung jawab untuk mengelola seluruh siklus hidup VM, mulai dari provisioning hingga penghapusan.
+  Platform IaaS (Infrastructure as a Service) open source yang menjadi inti dari setup ini. CloudStack bertanggung jawab untuk mengelola seluruh siklus hidup VM, mulai dari provisioning hingga penghapusan.
 - **MySQL**
-Digunakan sebagai database utama CloudStack untuk menyimpan seluruh konfigurasi, metadata operasional, status sistem, akun pengguna, detail VM, konfigurasi jaringan, dan job history.
+  Digunakan sebagai database utama CloudStack untuk menyimpan seluruh konfigurasi, metadata operasional, status sistem, akun pengguna, detail VM, konfigurasi jaringan, dan job history.
 - **KVM (Kernel-based Virtual Machine)**
-Hypervisor yang digunakan CloudStack untuk membuat dan mengelola VM di atas host fisik. Dipilih karena stabilitasnya, status open-source, dan integrasi native dengan Linux.
+  Hypervisor yang digunakan CloudStack untuk membuat dan mengelola VM di atas host fisik. Dipilih karena stabilitasnya, status open-source, dan integrasi native dengan Linux.
 - **NFS (Network File System)**
-Digunakan sebagai primary storage (menyimpan disk volume VM) dan secondary storage (menyimpan ISO, template, dan snapshot).
+  Digunakan sebagai primary storage (menyimpan disk volume VM) dan secondary storage (menyimpan ISO, template, dan snapshot).
 - **libvirtd**
-Daemon manajemen virtualisasi yang menjadi jembatan antara CloudStack Agent dengan KVM. CloudStack berkomunikasi dengan KVM melalui libvirtd via TCP port 16509.
+  Daemon manajemen virtualisasi yang menjadi jembatan antara CloudStack Agent dengan KVM. CloudStack berkomunikasi dengan KVM melalui libvirtd via TCP port 16509.
 - **Tailscale**
-VPN mesh berbasis WireGuard yang digunakan untuk mengakses dashboard CloudStack dari luar jaringan VirtualBox.
+  VPN mesh berbasis WireGuard yang digunakan untuk mengakses dashboard CloudStack dari luar jaringan VirtualBox.
 
 ---
 
@@ -49,6 +48,7 @@ Setup ini menggunakan VirtualBox dengan beberapa konfigurasi khusus. Perhatikan 
 ---
 
 ## Arsitektur
+
 ![image](https://hackmd.io/_uploads/rygIDYVAlMe.png)
 
 ---
@@ -62,6 +62,7 @@ Di dalam VirtualBox, berjalan satu **Ubuntu Server VM** yang menjalankan semua p
 Di dalam VM tersebut, **CloudStack + KVM** bekerja bersama. CloudStack berperan sebagai otak yang mengatur infrastruktur, sementara KVM adalah mesin yang benar-benar menjalankan VM-VM guest. KVM kemudian membuat jaringan terisolasi tersendiri (10.1.1.0/24) khusus untuk VM guest, terpisah dari jaringan host.
 
 Untuk akses dari luar, ada dua jalur masuk:
+
 - **Jalur normal**: lewat router LAN rumah → masuk ke VM via NAT VirtualBox
 - **Jalur remote**: lewat tools seperti Tailscale atau Ngrok yang membuat tunnel langsung ke dalam VM, memungkinkan akses dari mana saja tanpa perlu berada di jaringan yang sama
 
@@ -92,6 +93,7 @@ CloudStack membutuhkan network bridge bernama `cloudbr0` sebagai jembatan antara
 Di Ubuntu 24.04, konfigurasi jaringan dikelola oleh Netplan. Kita perlu menonaktifkan DHCP pada interface fisik dan mengalihkan IP ke bridge `cloudbr0`.
 
 Masuk sebagai root terlebih dahulu:
+
 ```bash
 sudo -i
 cd /etc/netplan
@@ -99,6 +101,7 @@ nano ./01-dhcp.yaml
 ```
 
 Ganti seluruh isi file dengan konfigurasi berikut:
+
 ```yaml
 network:
   version: 2
@@ -115,7 +118,7 @@ network:
         - to: default
           via: 192.168.1.1
       nameservers:
-        addresses: [1.1.1.1,8.8.8.8]
+        addresses: [1.1.1.1, 8.8.8.8]
       interfaces: [enp0s3]
       dhcp4: false
       dhcp6: false
@@ -192,6 +195,7 @@ nano /etc/mysql/mysql.conf.d/mysqld.cnf
 ```
 
 Tambahkan di bawah section `[mysqld]`:
+
 ```
 server-id = 1
 sql-mode="STRICT_TRANS_TABLES,NO_ENGINE_SUBSTITUTION,ERROR_FOR_DIVISION_BY_ZERO,NO_ZERO_DATE,NO_ZERO_IN_DATE,NO_ENGINE_SUBSTITUTION"
@@ -404,17 +408,127 @@ Tekan `Ctrl+C` setelah muncul pesan yang menandakan server sudah berjalan.
 Setelah Management Server berjalan, dashboard dapat diakses melalui browser. Karena setup ini menggunakan VirtualBox NAT Network, IP server tidak bisa diakses langsung dari luar. Solusinya adalah menggunakan Tailscale yang menyediakan IP yang dapat dijangkau dari mana saja.
 
 Buka browser dan akses:
+
 ```
 http://100.82.122.116:8080/
 ```
 
 Login dengan kredensial default:
+
 ```
 Username : admin
 Password : password
 ```
 
 Selanjutnya, dashboard CloudStack akan tampil dan setup infrastruktur cloud dapat dilanjutkan.
+
+#### 7a. Konfigurasi Cloudflare Tunnel
+
+Tailscale memang sudah cukup untuk akses internal, tapi kita ingin dashboard dan service lainnya bisa diakses lewat domain publik dengan HTTPS, Maka dari itu kami menggunakan Cloudflare Tunnel. Tunnel ini membuat koneksi keluar dari server kita ke jaringan Cloudflare, jadi tidak perlu membuka port apapun ke internet dan tidak perlu public IP.
+
+Dalam setup ini, kita akan mengekspos tiga service lewat subdomain yang berbeda:
+
+| Subdomain                                  | Tujuan                                                        |
+| ------------------------------------------ | ------------------------------------------------------------- |
+| `openstack-cloud9.christianhadiwijaya.dev` | Dashboard CloudStack (Management Server port 8080)            |
+| `vm.christianhadiwijaya.dev`               | SSH access ke VM instance via browser (Cloudflare Zero Trust) |
+| `vm-web.christianhadiwijaya.dev`           | Web server Nginx yang berjalan di VM instance                 |
+
+**Install cloudflared**
+
+Download dan install `cloudflared` daemon di server Ubuntu:
+
+```bash
+curl -L https://github.com/cloudflare/cloudflared/latest/download/cloudflared-linux-amd64.deb -o cloudflared.deb
+sudo dpkg -i cloudflared.deb
+```
+
+**Login ke Cloudflare**
+
+Jalankan perintah login. Browser akan terbuka (atau tampil URL yang bisa diklik) untuk mengotorisasi akun Cloudflare:
+
+```bash
+cloudflared tunnel login
+```
+
+Setelah berhasil login, credential file akan tersimpan di `~/.cloudflared/cert.pem`.
+
+**Buat Tunnel Baru**
+
+Buat tunnel dengan nama `cloud9`:
+
+```bash
+cloudflared tunnel create cloud9
+```
+
+Perintah ini akan menghasilkan file credential berupa JSON di `~/.cloudflared/` dengan UUID tunnel sebagai nama filenya. Catat UUID tersebut karena akan dipakai di konfigurasi.
+
+**Buat File Konfigurasi**
+
+Buat file konfigurasi tunnel:
+
+```bash
+sudo mkdir -p /etc/cloudflared
+sudo nano /etc/cloudflared/config.yml
+```
+
+Isi dengan konfigurasi berikut:
+
+```yaml
+tunnel: cloud9
+credentials-file: /root/.cloudflared/<UUID-TUNNEL>.json
+
+ingress:
+  - hostname: openstack-cloud9.christianhadiwijaya.dev
+    service: http://192.168.1.4:8080
+  - hostname: vm.christianhadiwijaya.dev
+    service: ssh://192.168.1.52:22
+  - hostname: vm-web.christianhadiwijaya.dev
+    service: http://192.168.1.52:80
+  - service: http_status:404
+```
+
+Ganti `<UUID-TUNNEL>` dengan UUID yang didapat saat membuat tunnel. Entry terakhir (`http_status:404`) adalah catch-all rule yang wajib ada sebagai fallback untuk request yang tidak cocok dengan hostname manapun.
+
+**Tambahkan DNS Route**
+
+Daftarkan ketiga subdomain agar mengarah ke tunnel:
+
+```bash
+cloudflared tunnel route dns cloud9 openstack-cloud9.christianhadiwijaya.dev
+cloudflared tunnel route dns cloud9 vm.christianhadiwijaya.dev
+cloudflared tunnel route dns cloud9 vm-web.christianhadiwijaya.dev
+```
+
+Perintah ini otomatis membuat CNAME record di Cloudflare DNS yang mengarah ke tunnel `cloud9`.
+
+**Jalankan sebagai Service**
+
+Agar tunnel berjalan otomatis saat server boot:
+
+```bash
+sudo cloudflared service install
+sudo systemctl enable cloudflared
+sudo systemctl start cloudflared
+```
+
+**Konfigurasi Cloudflare Zero Trust untuk SSH Access**
+
+Subdomain `vm.christianhadiwijaya.dev` tidak langsung mengekspos SSH secara terbuka ke internet. Akses SSH ini dilindungi oleh Cloudflare Zero Trust, yang memungkinkan user mengakses terminal SSH langsung dari browser tanpa perlu SSH client, sekaligus menambahkan layer autentikasi sebelum koneksi terbentuk.
+
+Langkah konfigurasinya dilakukan di Cloudflare Zero Trust Dashboard (`https://one.dash.cloudflare.com`):
+
+1. Masuk ke menu **Access** → **Applications** → klik **Add an Application**
+2. Pilih tipe **Self-hosted**
+3. Isi konfigurasi aplikasi  
+   ![picture 0](https://i.imgur.com/9xVuXEl.png)
+4. Buat policy untuk menentukan siapa yang boleh akses  
+   ![picture 1](https://i.imgur.com/aGtZ2En.png)
+5. Di bagian **Advanced Settings**, pada kolom **Browser Rendering**, pilih **SSH**
+
+Dengan konfigurasi ini, saat seseorang mengakses `vm.christianhadiwijaya.dev` lewat browser, Cloudflare akan memunculkan halaman login terlebih dahulu. Setelah autentikasi berhasil, terminal SSH langsung tampil di browser tanpa perlu install apapun di sisi client.
+
+Ini jauh lebih aman dibanding mengekspos port 22 langsung ke internet, karena SSH service tidak pernah benar-benar terpapar secara publik. Semua koneksi diproxy melalui jaringan Cloudflare dan dilindungi oleh identity verification.
 
 ---
 
@@ -443,7 +557,7 @@ Untuk mengekspos VM web server ke jaringan, atur firewall dan port forwarding me
    - Protocol: TCP
    - Port: 80
    - CIDR: `0.0.0.0/0`
-   
+
    ![Firewall Tab](images/firewall_tab.png)
 
 4. Buka tab **Port Forwarding** dan tambahkan aturan baru agar trafik dari IP publik diteruskan ke VM:
@@ -451,7 +565,7 @@ Untuk mengekspos VM web server ke jaringan, atur firewall dan port forwarding me
    - Private Port: 80
    - Protocol: TCP
    - Add VM: Pilih VM **web-server-ubuntu-server**
-   
+
    ![Port Forwarding Tab](images/port-forwarding_tab.png)
 
 Setelah pengaturan di atas selesai, verifikasi bahwa web server sudah berjalan dengan mengakses IP publik tersebut melalui browser: `http://192.168.1.52`.
@@ -461,18 +575,22 @@ Setelah pengaturan di atas selesai, verifikasi bahwa web server sudah berjalan d
 Agar web server dapat diakses menggunakan domain publik dengan protokol HTTPS, tambahkan konfigurasinya ke dalam Cloudflare Tunnel:
 
 1. Edit file konfigurasi Cloudflare Tunnel:
+
    ```bash
    sudo nano /etc/cloudflare/config.yml
    ```
-   *(Catatan: Path bisa jadi berada di `/etc/cloudflared/config.yml` tergantung sistem Anda)*
+
+   _(Catatan: Path bisa jadi berada di `/etc/cloudflared/config.yml` tergantung sistem Anda)_
 
 2. Tambahkan ingress rule baru pada konfigurasi:
+
    ```yaml
    - hostname: vm-web.christianhadiwijaya.dev
      service: http://192.168.1.52:80
    ```
 
 3. Tambahkan DNS route menuju tunnel yang digunakan (misal: `cloud9`) untuk hostname yang baru:
+
    ```bash
    cloudflared tunnel route dns cloud9 vm-web.christianhadiwijaya.dev
    ```
@@ -483,7 +601,6 @@ Agar web server dapat diakses menggunakan domain publik dengan protokol HTTPS, t
    ```
 
 Setelah seluruh langkah berhasil dilakukan, web server seharusnya sudah bisa diakses secara publik dan aman di URL: [https://vm-web.christianhadiwijaya.dev](https://vm-web.christianhadiwijaya.dev).
-
 
 ---
 
@@ -502,7 +619,9 @@ CloudStack, KVM, MySQL, dan System VMs (SSVM + Console Proxy) berjalan bersamaan
 Seluruh konfigurasi CloudStack (database, zone, host, storage) mengacu ke IP spesifik. Pastikan IP server selalu statis agar tidak berubah setelah reboot, dengan menggunakan `dhcp4: false` di konfigurasi Netplan.
 
 ---
+
 ## Anggota:
+
 1. Benedict Aurelius (2306209095)
 2. Gede Rama Pradnya (2306161914)
 3. Reyhan Ahnaf Deannova (2306267100)
