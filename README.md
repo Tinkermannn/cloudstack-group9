@@ -405,7 +405,7 @@ Setelah Management Server berjalan, dashboard dapat diakses melalui browser. Kar
 
 Buka browser dan akses:
 ```
-http://<TAILSCALE_IP>:8080/client
+http://100.82.122.116:8080/
 ```
 
 Login dengan kredensial default:
@@ -414,7 +414,7 @@ Username : admin
 Password : password
 ```
 
-Jika berhasil, dashboard CloudStack akan tampil dan setup infrastruktur cloud dapat dilanjutkan.
+Selanjutnya, dashboard CloudStack akan tampil dan setup infrastruktur cloud dapat dilanjutkan.
 
 ---
 
@@ -439,7 +439,7 @@ Seluruh konfigurasi CloudStack (database, zone, host, storage) mengacu ke IP spe
 3. Reyhan Ahnaf Deannova (2306267100)
 4. Rafi Naufal Aryaputra (2306250680)
 5. M Arya Wiandra (2306218295)
-6. Andrew Kristofer Jian (XXXXXXX)
+6. Andrew Kristofer Jian (2206059673)
 7. Christian Hadiwijaya (2306161952)
 8. Wilman Saragih Sitio (2306161776)
 9. Fadlihajjan Carel Agfata (2206826822)
