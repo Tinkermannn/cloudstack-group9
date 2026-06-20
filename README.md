@@ -1,5 +1,26 @@
 # Cloud 9: Apache CloudStack Setup on VirtualBox Ubuntu Server 24.04
 
+## Daftar Isi
+
+- [Spesifikasi](#spesifikasi)
+- [Dependencies](#dependencies)
+- [Prasyarat](#prasyarat)
+- [Arsitektur](#arsitektur)
+  - [Penjelasan Arsitektur](#penjelasan-arsitektur)
+  - [Keterbatasan Single Node](#keterbatasan-single-node)
+- [Step-by-Step Installation](#step-by-step-installation)
+  - [Step 1: Cek IP dan Network Interface](#step-1-cek-ip-dan-network-interface)
+  - [Step 2: Konfigurasi Network Bridge (Netplan)](#step-2-konfigurasi-network-bridge-netplan)
+  - [Step 3: Install Monitoring Tools](#step-3-install-monitoring-tools)
+  - [Step 4: Konfigurasi SSH](#step-4-konfigurasi-ssh)
+  - [Step 5: Install Apache CloudStack dan MySQL](#step-5-install-apache-cloudstack-dan-mysql)
+  - [Step 6: Setup KVM Hypervisor](#step-6-setup-kvm-hypervisor)
+  - [Step 7: Akses Dashboard CloudStack](#step-7-akses-dashboard-cloudstack)
+  - [Step 8: Setup Web Server, Port Forwarding, dan Cloudflare Tunnel](#step-8-setup-web-server-port-forwarding-dan-cloudflare-tunnel)
+- [Catatan Penting](#catatan-penting)
+- [Anggota](#anggota)
+- [Referensi](#referensi)
+
 ---
 
 ## Spesifikasi
